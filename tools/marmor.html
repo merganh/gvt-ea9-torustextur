@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Texturgenerator EA 9</title>
+</head>
+<body>
+<pre id="out"></pre>
+<script>
+// Erzeugt die kachelbare Marmortextur (Türkis und Dunkelblau mit Goldadern) per Canvas 2D
+// und gibt sie als Data-URL aus. Aufruf: marmor.html?size=2048&type=webp (siehe tools/build-texture.mjs)
+"use strict";
+
+const params = new URLSearchParams(location.search);
+const SIZE = parseInt(params.get("size") || "2048", 10);
+const TYPE = { webp: "image/webp", png: "image/png", jpeg: "image/jpeg" }[params.get("type") || "webp"];
+const QUALITY = parseFloat(params.get("q") || "0.92");
+const PX = SIZE / 1024; // Linienbreiten beziehen sich auf eine Kachel mit 1024 Pixeln
+
+// Pseudozufall mit festem Startwert, damit das Bild reproduzierbar ist
+function mulberry32(seed) {
+  return function () {
+    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+    let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+const rand = mulberry32(20261011);
+const perm = new Uint8Array(512);
+for (let i = 0; i < 256; i++) perm[i] = i;
+for (let i = 255; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); const t = perm[i]; perm[i] = perm[j]; perm[j] = t; }
+for (let i = 0; i < 256; i++) perm[256 + i] = perm[i];
+const gx = new Float32Array(256), gy = new Float32Array(256);
+for (let i = 0; i < 256; i++) { const a = rand() * 2 * Math.PI; gx[i] = Math.cos(a); gy[i] = Math.sin(a); }
+
+// Periodisches Gradientenrauschen: Gitterpunkte werden modulo der Periode p gebildet,
+// dadurch passen linker und rechter bzw. oberer und unterer Rand exakt zusammen.
+function fade(t) { return t * t * t * (t * (t * 6 - 15) + 10); }
+function pnoise(x, y, p) {
+  const xf = Math.floor(x), yf = Math.floor(y);
+  const fx = x - xf, fy = y - yf;
+  const i0 = ((xf % p) + p) % p, j0 = ((yf % p) + p) % p;
+  const i1 = (i0 + 1) % p, j1 = (j0 + 1) % p;
+  const h00 = perm[perm[i0] + j0], h10 = perm[perm[i1] + j0];
+  const h01 = perm[perm[i0] + j1], h11 = perm[perm[i1] + j1];
+  const n00 = gx[h00] * fx + gy[h00] * fy;
+  const n10 = gx[h10] * (fx - 1) + gy[h10] * fy;
+  const n01 = gx[h01] * fx + gy[h01] * (fy - 1);
+  const n11 = gx[h11] * (fx - 1) + gy[h11] * (fy - 1);
+  const u = fade(fx), v = fade(fy);
+  const a = n00 + (n10 - n00) * u, b = n01 + (n11 - n01) * u;
+  return (a + (b - a) * v) * 1.41;
+}
+// fBm über Texturkoordinaten u, v in [0, 1): p Zellen pro Kachel in der ersten Oktave
+function fbm(u, v, p, octaves, gain) {
+  let sum = 0, amp = 0.5, norm = 0;
+  for (let o = 0; o < octaves; o++) {
+    sum += amp * pnoise(u * p, v * p, p);
+    norm += amp; amp *= gain; p *= 2;
+  }
+  return sum / norm;
+}
+
+// Farbverlauf von Nachtblau über Petrol und Türkis bis Hellaqua
+const RAMP = [
+  [0.00, [5, 14, 34]],
+  [0.30, [10, 34, 78]],
+  [0.48, [14, 78, 112]],
+  [0.62, [24, 140, 150]],
+  [0.76, [52, 196, 186]],
+  [0.90, [150, 232, 222]],
+  [1.00, [226, 250, 246]]
+];
+function ramp(t) {
+  t = Math.min(1, Math.max(0, t));
+  for (let k = 1; k < RAMP.length; k++) {
+    if (t <= RAMP[k][0]) {
+      const [t0, c0] = RAMP[k - 1], [t1, c1] = RAMP[k];
+      let f = (t - t0) / (t1 - t0); f = f * f * (3 - 2 * f);
+      return [c0[0] + (c1[0] - c0[0]) * f, c0[1] + (c1[1] - c0[1]) * f, c0[2] + (c1[2] - c0[2]) * f];
+    }
+  }
+  return RAMP[RAMP.length - 1][1];
+}
+function smooth(e0, e1, x) { const t = Math.min(1, Math.max(0, (x - e0) / (e1 - e0))); return t * t * (3 - 2 * t); }
+function mix(a, b, t) { return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t]; }
+
+function render() {
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = SIZE;
+  const ctx = canvas.getContext("2d");
+  const img = ctx.createImageData(SIZE, SIZE);
+  const d = img.data;
+  const GOLD = [214, 172, 92], GOLD_HI = [255, 228, 160], WHITE = [236, 250, 248];
+
+  for (let y = 0; y < SIZE; y++) {
+    const v = y / SIZE;
+    for (let x = 0; x < SIZE; x++) {
+      const u = x / SIZE;
+      // doppelte Gebietsverzerrung (domain warping) für fließende Strukturen
+      const qx = fbm(u, v, 3, 4, 0.5);
+      const qy = fbm(u + 0.317, v + 0.553, 3, 4, 0.5);
+      const rx = fbm(u + 0.22 * qx + 0.71, v + 0.22 * qy + 0.13, 4, 4, 0.5);
+      const ry = fbm(u + 0.22 * qx + 0.29, v + 0.22 * qy + 0.87, 4, 4, 0.5);
+      const wu = u + 0.16 * rx, wv = v + 0.16 * ry;
+
+      // Grundton: Wolken aus Türkis auf dunklem Blau
+      const base = fbm(wu, wv, 2, 6, 0.55);
+      // klassische Marmorbänder: sin über (u + 2v) ist mit Periode 1 kachelbar
+      const band = Math.sin(2 * Math.PI * (wu + 2 * wv) + 5.0 * base + 3.0 * rx);
+      let t = 0.47 + 0.8 * base + 0.18 * qx + 0.10 * band;
+      let col = ramp(t);
+      // leichte Farbverschiebung in Richtung Smaragd und Indigo
+      const tint = fbm(u + 0.5, v + 0.5, 2, 3, 0.5);
+      col = [col[0] * (1 - 0.25 * tint), col[1] * (1 + 0.06 * tint), col[2] * (1 + 0.12 * tint)];
+
+      // Adern liegen auf den Nulllinien eines Rauschfelds. Abstand zur Linie in Pixeln
+      // über |n| / |grad n| (Vorwärtsdifferenzen), dadurch gleichmäßig dünne, scharfe Linien.
+      const h = 1 / SIZE;
+      const vein1 = function (a, b) { return fbm(a + 0.12 * rx + 0.41, b + 0.12 * ry + 0.07, 3, 5, 0.45); };
+      const n1 = vein1(u, v);
+      const d1 = Math.abs(n1) / (Math.hypot(vein1(u + h, v) - n1, vein1(u, v + h) - n1) + 1e-6);
+      const veinMask = smooth(-0.3, 0.3, fbm(u + 0.8, v + 0.2, 2, 3, 0.5));
+      const w1 = PX * (0.7 + 1.6 * veinMask);
+      const veinW = (1 - smooth(w1 * 0.5, w1, d1)) * 0.85 + (1 - smooth(0, w1 * 7, d1)) * 0.22 + (1 - smooth(0, PX * 36, d1)) * 0.08;
+      col = mix(col, WHITE, Math.min(1, veinW * (0.4 + 0.6 * veinMask)));
+
+      // Goldadern entlang eines zweiten Rauschfelds, abschnittsweise ausgeblendet
+      const vein2 = function (a, b) { return fbm(a + 0.10 * rx + 0.63, b + 0.10 * ry + 0.38, 2, 5, 0.45); };
+      const n2 = vein2(u, v);
+      const d2 = Math.abs(n2) / (Math.hypot(vein2(u + h, v) - n2, vein2(u, v + h) - n2) + 1e-6);
+      const goldMask = smooth(-0.25, 0.15, fbm(u + 0.13, v + 0.91, 2, 3, 0.5));
+      const w2 = PX * (0.8 + 1.4 * goldMask);
+      const core = (1 - smooth(w2 * 0.6, w2 * 1.1, d2)) * goldMask;
+      const shade = (1 - smooth(w2, w2 * 4, d2)) * goldMask;
+      col = mix(col, [col[0] * 0.5, col[1] * 0.55, col[2] * 0.65], shade * 0.45);
+      const sparkle = smooth(-0.3, 0.4, fbm(u, v, 32, 2, 0.5));
+      col = mix(col, mix(GOLD, GOLD_HI, sparkle), core);
+
+      // feine Körnung des Steins
+      const grain = fbm(u, v, 64, 2, 0.5);
+      const g = 1 + 0.06 * grain;
+
+      const i = (y * SIZE + x) * 4;
+      d[i] = Math.min(255, col[0] * g);
+      d[i + 1] = Math.min(255, col[1] * g);
+      d[i + 2] = Math.min(255, col[2] * g);
+      d[i + 3] = 255;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  return canvas.toDataURL(TYPE, QUALITY);
+}
+
+document.getElementById("out").textContent = render();
+</script>
+</body>
+</html>

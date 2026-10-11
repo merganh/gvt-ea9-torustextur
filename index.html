@@ -1,0 +1,921 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="data:,">
+<title>EA 9: Torustextur</title>
+
+<style>
+  :root {
+    --bg: #ffffff;
+    --surface: #ffffff;
+    --soft: #f5f5f5;
+    --primary: #1a1a1a;
+    --primary-dark: #000000;
+    --primary-light: #ededed;
+    --accent: #2a2a2a;
+    --success: #2e7d32;
+    --success-bg: #e8f5e9;
+    --error: #c62828;
+    --error-bg: #ffebee;
+    --warn: #ef6c00;
+    --warn-bg: #fff3e0;
+    --text: #1a1a1a;
+    --text-muted: #6b6b6b;
+    --border: #d4d4d4;
+    --border-strong: #1a1a1a;
+    --shadow: 0 1px 2px rgba(0,0,0,.05);
+    --shadow-lg: 0 2px 6px rgba(0,0,0,.06);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.55;
+  }
+
+  header {
+    background: #1a1a1a;
+    color: #fff;
+    padding: 2.5rem 1.5rem 2rem;
+    border-bottom: 1px solid #000;
+  }
+  header .wrap { max-width: 1080px; margin: 0 auto; }
+  header h1 { margin: 0 0 .35rem; font-size: 1.85rem; font-weight: 600; }
+  header p { margin: 0; opacity: .92; font-size: 1rem; }
+  header .meta {
+    margin-top: 1rem; font-size: .85rem; opacity: .75;
+    display: flex; flex-wrap: wrap; gap: .25rem 1rem;
+  }
+
+  main { max-width: 1080px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+
+  section { margin-bottom: 3rem; }
+
+  h2 {
+    font-size: 1.35rem; margin: 0 0 1rem;
+    padding-bottom: .5rem; border-bottom: 1px solid var(--border);
+  }
+  h2 .num {
+    display: inline-block; background: #1a1a1a; color: #fff;
+    border-radius: 2px; padding: .15rem .55rem; margin-right: .55rem;
+    font-size: .85rem; vertical-align: middle; letter-spacing: .03em;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 4px solid #1a1a1a;
+    border-radius: 4px;
+    box-shadow: var(--shadow);
+    padding: 1rem 1.1rem 1.1rem;
+    margin-bottom: 1.25rem;
+  }
+  .card h4 { margin: 0 0 .35rem; font-size: .95rem; font-weight: 600; }
+  .card .sub { font-size: .82rem; color: var(--text-muted); margin: 0 0 .65rem; }
+
+  .toolbar { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1rem; }
+  .btn {
+    display: inline-block; padding: .5rem 1rem;
+    background: #1a1a1a; color: #fff;
+    border: 1px solid #1a1a1a; border-radius: 2px;
+    font-size: .9rem; font-weight: 500; cursor: pointer;
+    transition: background .15s, color .15s;
+    font-family: inherit;
+  }
+  .btn:hover, .btn.is-pressed { background: #fff; color: #1a1a1a; }
+  .btn:focus-visible { outline: 2px solid #1a1a1a; outline-offset: 2px; }
+  .btn:disabled { background: #fff; color: var(--text-muted); border-color: var(--border); cursor: not-allowed; }
+  .btn.secondary { background: #fff; color: #1a1a1a; }
+  .btn.secondary:hover, .btn.secondary.is-pressed { background: #1a1a1a; color: #fff; }
+  .btn kbd { margin-left: .35rem; }
+
+  .global-status {
+    background: var(--soft); color: var(--text);
+    border-left: 3px solid #1a1a1a;
+    padding: .65rem 1rem; border-radius: 0;
+    font-size: .9rem; margin-bottom: 1.25rem;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+  }
+  .global-status.is-ready { background: var(--success-bg); border-left-color: var(--success); }
+  .global-status.is-error { background: var(--error-bg); border-left-color: var(--error); color: var(--error); }
+  .global-status.is-warn  { background: var(--warn-bg);  border-left-color: var(--warn); }
+
+  .statline {
+    display: flex; flex-wrap: wrap; gap: .4rem 1.5rem; margin: 0 0 1rem;
+    font-size: .9rem; font-family: ui-monospace, Menlo, Consolas, monospace;
+  }
+  .statline b { font-weight: 600; }
+
+  /* WebGL-Bühne: feste Seitenverhältnisse, Breite folgt dem Container */
+  .stage {
+    background: var(--soft); border: 1px solid var(--border); border-radius: 4px;
+    padding: .75rem; margin-bottom: 1rem;
+  }
+  #glCanvas {
+    display: block; width: 100%; aspect-ratio: 16 / 10; border-radius: 2px;
+    background: radial-gradient(ellipse at 50% 42%, #2c323b 0%, #15181d 62%, #0b0d10 100%);
+    outline: none;
+  }
+  #glCanvas:focus-visible { outline: 2px solid #1a1a1a; outline-offset: 2px; }
+
+  .toolbar .label {
+    align-self: center; font-size: .82rem; color: var(--text-muted);
+    min-width: 5.5rem;
+  }
+  /* Umschalter: aktive Textur gefüllt, inaktive hell */
+  .btn.seg[aria-pressed="false"] { background: #fff; color: #1a1a1a; }
+  .btn.seg[aria-pressed="false"]:hover { background: #1a1a1a; color: #fff; }
+  .btn.seg[aria-pressed="false"]:disabled { background: #fff; color: var(--text-muted); border-color: var(--border); }
+
+  .prose { max-width: 740px; }
+  .prose p { margin: 0 0 .75rem; }
+  .prose ul { padding-left: 1.4rem; margin: 0 0 1rem; }
+  .prose li { margin-bottom: .35rem; }
+  .prose a { color: #1a1a1a; text-decoration-thickness: 1px; }
+  .prose a:hover { text-decoration-thickness: 2px; }
+  .prose code { background: var(--soft); padding: 0 .3rem; border-radius: 3px; font-size: .9em; }
+  .prose h3 { font-size: 1rem; margin: 1.25rem 0 .5rem; }
+  .formula {
+    font-family: ui-monospace, Menlo, Consolas, monospace; font-size: .88rem;
+    background: var(--soft); border-left: 3px solid #1a1a1a; padding: .6rem .9rem;
+    margin: 0 0 1rem; overflow-x: auto; white-space: pre;
+  }
+
+  table.key-table { border-collapse: collapse; margin: .5rem 0 1rem; font-size: .9rem; width: 100%; }
+  table.key-table th, table.key-table td { border: 1px solid var(--border); padding: .4rem .7rem; text-align: left; }
+  table.key-table th { background: var(--soft); font-weight: 600; }
+  table.key-table td:first-child { white-space: nowrap; width: 1%; }
+
+  kbd {
+    display: inline-block; padding: .05rem .35rem; background: var(--soft);
+    border: 1px solid var(--border); border-radius: 3px; font-size: .78rem; color: var(--text);
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+  }
+
+  footer { border-top: 1px solid var(--border); padding-top: 1.5rem; font-size: .85rem; color: var(--text-muted); }
+
+  @media (max-width: 720px) {
+    header h1 { font-size: 1.5rem; }
+    main { padding: 1.5rem 1rem 3rem; }
+    .stage { padding: .4rem; }
+    .toolbar .label { min-width: 100%; }
+  }
+
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+
+  /* Kontextsensitive Hilfe (ISO 9241-110) */
+  .help { position: relative; display: inline-block; margin-left: .5rem; vertical-align: middle; }
+  .help-btn {
+    width: 1.4rem; height: 1.4rem; padding: 0;
+    border: 1px solid var(--border-strong); background: #fff; color: var(--text);
+    border-radius: 50%; font-size: .8rem; font-weight: 600; cursor: help; line-height: 1;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .help-btn:hover, .help-btn:focus-visible { background: var(--text); color: #fff; outline: none; }
+  .help-popover {
+    display: none; position: absolute; top: calc(100% + .35rem); left: 50%; transform: translateX(-50%);
+    width: min(360px, 80vw); background: #fff; color: var(--text);
+    border: 1px solid var(--border-strong); border-radius: 4px;
+    padding: .7rem .85rem; font-size: .85rem; line-height: 1.45;
+    box-shadow: var(--shadow-lg); z-index: 10; text-align: left; font-weight: normal;
+  }
+  .help-popover::before {
+    content: ""; position: absolute; top: -7px; left: 50%; transform: translateX(-50%) rotate(45deg);
+    width: 12px; height: 12px; background: #fff;
+    border-left: 1px solid var(--border-strong); border-top: 1px solid var(--border-strong);
+  }
+  .help.is-open .help-popover { display: block; }
+  .help-popover h4 { margin: 0 0 .35rem; font-size: .9rem; font-weight: 600; }
+  .help-popover p { margin: 0 0 .35rem; }
+  .help-popover p:last-child { margin-bottom: 0; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <h1>EA 9: Torustextur</h1>
+    <p>Ein Torus in WebGL mit einer selbst erstellten Bildtextur aus türkis-blauem Marmor. Als Erweiterung lässt sich auf eine prozedurale Malachit-Textur umschalten, die der Fragment-Shader aus den Texturkoordinaten berechnet. Die Kamera kreist mit den Pfeiltasten oder WASD um den Torus.</p>
+    <div class="meta">
+      <span>Hamid Mergan</span>
+      <span>TH Lübeck</span>
+      <span>Modul Graphical Visualisation Technologies</span>
+      <span>Wintersemester 2026/27</span>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <div id="globalStatus" class="global-status" role="status" aria-live="polite">Lade Bildtextur …</div>
+
+  <!-- A1 Torus -->
+  <section aria-labelledby="a1">
+    <h2 id="a1"><span class="num">A1</span>Texturierter Torus
+      <span class="help">
+        <button type="button" class="help-btn" aria-label="Hilfe zu A1" aria-expanded="false">?</button>
+        <span class="help-popover" role="tooltip">
+          <h4>Textur und Kamera</h4>
+          <p>Mit den Buttons <b>Bildtextur</b> und <b>Prozedurale Textur</b> (oder den Tasten <kbd>1</kbd>, <kbd>2</kbd> und <kbd>t</kbd>) wechselst du zwischen den beiden Texturen. Der gefüllte Button zeigt die aktive Textur.</p>
+          <p>Die Pfeiltasten (oder <kbd>w</kbd> <kbd>a</kbd> <kbd>s</kbd> <kbd>d</kbd>) bewegen die Kamera um den Torus, <kbd>+</kbd> und <kbd>-</kbd> ändern den Abstand. Gedrückthalten bewegt weiter.</p>
+        </span>
+      </span>
+    </h2>
+
+    <div class="card">
+      <h4>Torus</h4>
+      <p class="sub">Grundaufgabe: Bildtextur mit Texturkoordinaten, Mipmaps und Wiederholung. Erweiterung: prozedurale Textur im Fragment-Shader.</p>
+      <div class="stage">
+        <canvas id="glCanvas" width="1600" height="1000" tabindex="0" aria-label="Texturierter Torus, Kamera mit Pfeiltasten steuerbar">Dein Browser unterstützt kein Canvas.</canvas>
+      </div>
+      <div class="statline" aria-label="Zustand der Darstellung">
+        <span><b>Textur:</b> <span id="infoTexture">…</span></span>
+        <span><b>Azimut:</b> <span id="infoAzimuth">…</span></span>
+        <span><b>Neigung:</b> <span id="infoElevation">…</span></span>
+        <span><b>Abstand:</b> <span id="infoDistance">…</span></span>
+      </div>
+      <div class="toolbar" role="group" aria-label="Textur wählen">
+        <span class="label">Textur</span>
+        <button id="btnImage" class="btn seg" type="button" aria-pressed="true" disabled>Bildtextur<kbd>1</kbd></button>
+        <button id="btnProc" class="btn seg" type="button" aria-pressed="false" disabled>Prozedurale Textur<kbd>2</kbd></button>
+        <button id="btnToggle" class="btn secondary" type="button" disabled>Umschalten<kbd>t</kbd></button>
+      </div>
+      <div class="toolbar" role="group" aria-label="Kamera bewegen">
+        <span class="label">Kamera</span>
+        <button id="btnLeft" class="btn secondary" type="button" disabled>◀ Links<kbd>←</kbd></button>
+        <button id="btnRight" class="btn secondary" type="button" disabled>Rechts ▶<kbd>→</kbd></button>
+        <button id="btnUp" class="btn secondary" type="button" disabled>▲ Höher<kbd>↑</kbd></button>
+        <button id="btnDown" class="btn secondary" type="button" disabled>▼ Tiefer<kbd>↓</kbd></button>
+        <button id="btnNear" class="btn secondary" type="button" disabled>Näher<kbd>+</kbd></button>
+        <button id="btnFar" class="btn secondary" type="button" disabled>Weiter<kbd>-</kbd></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- A2 Bedienung -->
+  <section aria-labelledby="a2">
+    <h2 id="a2"><span class="num">A2</span>Bedienung
+      <span class="help">
+        <button type="button" class="help-btn" aria-label="Hilfe zu A2" aria-expanded="false">?</button>
+        <span class="help-popover" role="tooltip">
+          <h4>Tastatur oder Maus</h4>
+          <p>Jede Taste hat einen Button mit derselben Wirkung. Beim Tastendruck leuchtet der zugehörige Button kurz auf.</p>
+        </span>
+      </span>
+    </h2>
+    <table class="key-table">
+      <thead><tr><th>Taste</th><th>Wirkung</th></tr></thead>
+      <tbody>
+        <tr><td><kbd>←</kbd> oder <kbd>a</kbd></td><td>Kamera kreist nach links um den Torus (5° pro Schritt)</td></tr>
+        <tr><td><kbd>→</kbd> oder <kbd>d</kbd></td><td>Kamera kreist nach rechts um den Torus (5° pro Schritt)</td></tr>
+        <tr><td><kbd>↑</kbd> oder <kbd>w</kbd></td><td>Kamera höher, Blick mehr von oben (bis 85°)</td></tr>
+        <tr><td><kbd>↓</kbd> oder <kbd>s</kbd></td><td>Kamera tiefer, Blick mehr von unten (bis -60°)</td></tr>
+        <tr><td><kbd>+</kbd></td><td>Kamera näher an den Torus (Abstand mindestens 2,2)</td></tr>
+        <tr><td><kbd>-</kbd></td><td>Kamera weiter weg (Abstand höchstens 7,0)</td></tr>
+        <tr><td><kbd>1</kbd></td><td>Bildtextur (Marmor) anzeigen</td></tr>
+        <tr><td><kbd>2</kbd></td><td>Prozedurale Textur (Malachit) anzeigen (Erweiterung)</td></tr>
+        <tr><td><kbd>t</kbd></td><td>Zwischen Bildtextur und prozeduraler Textur umschalten</td></tr>
+      </tbody>
+    </table>
+    <div class="prose">
+      <p>Die Kamera bewegt sich auf einer Kugel um den Mittelpunkt des Torus und schaut immer auf ihn (lookAt). Gedrückthalten einer Kamerataste bewegt weiter, an den Grenzen bleibt die Kamera stehen. Tastenkombinationen mit Strg, Cmd oder Alt (z. B. Cmd+R zum Neuladen) werden nicht abgefangen, und die Pfeiltasten scrollen die Seite nicht.</p>
+    </div>
+  </section>
+
+  <!-- A3 Umsetzung Grundaufgabe -->
+  <section aria-labelledby="a3">
+    <h2 id="a3"><span class="num">A3</span>Umsetzung der Bildtextur</h2>
+    <div class="prose">
+      <h3>Geometrie und Texturkoordinaten</h3>
+      <p>Der Torus wird wie im Skript (GRU) parametrisch erzeugt, mit Mittelradius R = 1,0 und Rohrradius r = 0,42. Der Winkel v läuft um den Ring, der Winkel u um die Röhre, beide von 0 bis 2π. Damit der Torus flach in der XZ-Ebene liegt, sind y und z gegenüber dem Skript vertauscht:</p>
+      <div class="formula">x = (R + r * cos u) * cos v
+y = r * sin u
+z = (R + r * cos u) * sin v</div>
+      <p>Die Normalen ergeben sich wie im Skript, indem der Faktor r und der Anteil R weggelassen werden:</p>
+      <div class="formula">nx = cos u * cos v
+ny = sin u
+nz = cos u * sin v</div>
+      <p>Zu den Vertex- und Normalen-Arrays kommt das Array <code>textureCoord</code> mit zwei Werten pro Vertex. Nach der Formel aus dem Skript (TXR) werden die Winkel auf den Bereich 0 bis 1 abgebildet:</p>
+      <div class="formula">s = v / 2π   (um den Ring)
+t = u / 2π   (um die Röhre)</div>
+      <p>Das Gitter hat (n + 1) × (m + 1) = 65 × 129 = 8385 Vertices bei n = 64 Schritten um die Röhre und m = 128 Schritten um den Ring. Der erste und der letzte Vertex jeder Reihe liegen an derselben Stelle, haben aber s = 0 bzw. s = 1 (für t entsprechend). Nur durch diese doppelten Nahtvertices läuft die Textur ohne Sprung um den Torus. Gezeichnet werden 2 × n × m = 16384 Dreiecke mit <code>drawElements</code> und 49152 Indizes.</p>
+
+      <h3>Laden und Parameter</h3>
+      <ul>
+        <li>Das Bild <code>textures/marmor.webp</code> (2048 × 2048 Pixel, Zweierpotenz) wird wie im Skript in <code>initTexture</code> mit <code>new Image()</code> geladen und in <code>onloadTextureImage</code> mit <code>gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image)</code> übergeben.</li>
+        <li>Filter: <code>TEXTURE_MIN_FILTER = LINEAR_MIPMAP_LINEAR</code> mit <code>gl.generateMipmap</code>, <code>TEXTURE_MAG_FILTER = LINEAR</code>. Falls der Browser die Erweiterung <code>EXT_texture_filter_anisotropic</code> anbietet, wird zusätzlich anisotrop gefiltert (bis 8-fach), damit die Adern auch an flach gesehenen Stellen scharf bleiben.</li>
+        <li>Wiederholung: <code>TEXTURE_WRAP_S</code> und <code>TEXTURE_WRAP_T</code> stehen auf <code>REPEAT</code>. Der Fragment-Shader liest mit <code>texture2D(uTexture, vTextureCoord * vec2(2.0, 1.0))</code>. Das Bild liegt also zweimal um den Ring und einmal um die Röhre, so sind die Kacheln auf dem Torus etwa quadratisch (Ringumfang 2π × 1,0 / 2 ≈ 3,1 zu Röhrenumfang 2π × 0,42 ≈ 2,6). Weil das Bild kachelbar ist, sind die Kachelgrenzen nicht zu sehen.</li>
+        <li>Beleuchtung: Die Texturfarbe wird wie im Skript (TXR, Kombination von Textur und Beleuchtung) mit dem Ergebnis eines einfachen Phong-Modells multipliziert (ambient, diffus, schwacher weißer Glanz). Die Lichter hängen an der Kamera, damit die Textur aus jeder Richtung gut zu sehen ist.</li>
+      </ul>
+
+      <h3>Fehlerfall</h3>
+      <p>Wird die Seite direkt als Datei (<code>file://</code>) geöffnet, verbietet der Browser die Verwendung des Bildes in WebGL. Die Statuszeile nennt dann den Grund und den Weg über einen Webserver (z. B. <code>python3 -m http.server</code>). Dasselbe gilt, wenn das Bild fehlt. In beiden Fällen wird automatisch die prozedurale Textur gezeigt, die ohne Bilddatei auskommt.</p>
+    </div>
+  </section>
+
+  <!-- A4 Erweiterung -->
+  <section aria-labelledby="a4">
+    <h2 id="a4"><span class="num">A4</span>Erweiterung: Prozedurale Textur (bearbeitet)
+      <span class="help">
+        <button type="button" class="help-btn" aria-label="Hilfe zu A4" aria-expanded="false">?</button>
+        <span class="help-popover" role="tooltip">
+          <h4>So siehst du die Erweiterung</h4>
+          <p>Oben in A1 auf <b>Prozedurale Textur</b> klicken oder <kbd>2</kbd> bzw. <kbd>t</kbd> drücken. Mit <b>Bildtextur</b>, <kbd>1</kbd> oder erneut <kbd>t</kbd> geht es zurück.</p>
+        </span>
+      </span>
+    </h2>
+    <div class="card">
+      <h4>Malachit aus Rauschen</h4>
+      <p class="sub">Erweiterung bearbeitet. Umschalten in A1 über die Buttons oder die Tasten <kbd>1</kbd>, <kbd>2</kbd> und <kbd>t</kbd>.</p>
+      <div class="toolbar">
+        <button id="btnProc2" class="btn" type="button" disabled>Prozedurale Textur zeigen<kbd>2</kbd></button>
+        <button id="btnImage2" class="btn secondary" type="button" disabled>Zurück zur Bildtextur<kbd>1</kbd></button>
+      </div>
+    </div>
+    <div class="prose">
+      <p>Die zweite Textur ist kein Bild, sondern wird für jedes Fragment im Fragment-Shader allein aus <code>vTextureCoord</code> berechnet. Sie bildet den grünen Schmuckstein Malachit nach, der aus vielen gebogenen, hell und dunkel gestreiften Bändern besteht.</p>
+      <ul>
+        <li><b>Rauschfunktion:</b> Wertrauschen auf einem Gitter. Die Zufallswerte an den Gitterpunkten liefert die Funktion <code>random</code> aus dem Skript (SLP), dazwischen wird mit der glatten Kurve 6t⁵ - 15t⁴ + 10t³ interpoliert. Mehrere Oktaven mit halber Amplitude und doppelter Frequenz ergeben ein fraktales Rauschen (fBm), drei Oktaven für die Verwirbelung und vier für das Bandmuster.</li>
+        <li><b>Nahtlos auf dem Torus:</b> Die Gitterpunkte werden modulo einer Periode gebildet (7 Zellen um den Ring, 3 um die Röhre, je Oktave verdoppelt, passend zum Verhältnis der Umfänge). Bei s = 1 und t = 1 liefert das Rauschen also exakt dieselben Werte wie bei 0, an der Naht des Torus entsteht kein Sprung.</li>
+        <li><b>Verwirbelung:</b> Die Koordinaten werden zweimal mit dem Rauschen selbst verschoben (Domain Warping). Dadurch entstehen die typischen geschwungenen, ineinander liegenden Formen.</li>
+        <li><b>Bänder:</b> Aus dem verwirbelten Rauschwert f entstehen mit <code>fract(24.0 * f)</code> Höhenlinien. Innerhalb eines Bandes läuft die Farbe von Dunkelgrün nach Hellgrün, am Bandende folgt eine dünne dunkle Linie. Jedes Band erhält über <code>random</code> eine eigene Helligkeit. Die harte Kante wird mit <code>fwidth</code> (Erweiterung <code>OES_standard_derivatives</code>) pixelgenau geglättet, damit sie nicht flimmert.</li>
+        <li><b>Feinstruktur:</b> Ein hochfrequentes Rauschen legt eine leichte Faserung darüber, ein grobes Rauschen sorgt für großflächige Helligkeitsunterschiede. Beleuchtet wird wie bei der Bildtextur.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- A5 Material -->
+  <section aria-labelledby="a5">
+    <h2 id="a5"><span class="num">A5</span>Material &amp; Quellen</h2>
+    <div class="prose">
+      <ul>
+        <li><b>Bildtextur:</b> selbst erstellt, ohne Fremdmaterial. <code>textures/marmor.webp</code> (2048 × 2048 Pixel) ist türkis-blauer Marmor mit weißen und goldenen Adern nach dem Vorbild aus dem Aufgabentext (Marmor in Türkis und Dunkelblau). Das Bild entsteht mit einem eigenen Skript (<code>tools/marmor.html</code>, Canvas 2D), das jedes Pixel berechnet: periodisches Gradientenrauschen mit doppelter Verwirbelung für die Farbwolken, einen Farbverlauf von Nachtblau über Petrol zu Hellaqua, Adern entlang der Nulllinien zweier weiterer Rauschfelder (gleichmäßig dünn über den Abstand |n| / |grad n|) und eine feine Körnung. Weil alle Rauschfunktionen die Kachelgröße als Periode haben, passen linker und rechter sowie oberer und unterer Rand nahtlos zusammen. Das Skript wird einmalig mit <code>node tools/build-texture.mjs</code> über Chrome ausgeführt und speichert das Ergebnis als Datei. Die Seite lädt nur das fertige Bild.</li>
+        <li><b>Format:</b> WebP mit Qualität 0,92, rund 270 KB. Dasselbe Bild hätte als PNG etwa 4,1 MB und als JPEG etwa 460 KB.</li>
+        <li><b>Prozedurale Textur:</b> selbst erstellt, vollständig im Fragment-Shader (siehe A4). Die Funktion <code>random</code> stammt aus dem Skript (Lerneinheit SLP, dort mit Quelle Lumina angegeben).</li>
+        <li><b>Grundlagen:</b> Torus nach Lerneinheit GRU, lookAt-Kamera nach KAP, Shader nach SHA und SLP, Phong-Beleuchtung nach BEL, Texturen nach TXR (Skript Graphical Visualisation Technologies, Prof. Dr. F. Gers).</li>
+        <li><b>Fremdmaterial:</b> keines. Es werden keine externen Bibliotheken, Schriften oder Bilder verwendet. Matrizen (perspective, lookAt, Normalenmatrix) sind selbst geschrieben, WebGL 1 ohne Framework.</li>
+        <li><b>Quelltext:</b> die für diese Aufgabe geschriebenen Stellen sind mit <code>// START EA9_TORUSTEXTUR</code> und <code>// END EA9_TORUSTEXTUR</code> markiert.</li>
+      </ul>
+    </div>
+  </section>
+
+  <footer>
+    <p>Die Seite läuft vollständig im Browser. Es werden keine Daten an einen Server gesendet und nichts gespeichert. Die Bildtextur wird statisch aus <code>textures/</code> geladen. Lokal bitte über einen Webserver öffnen, z. B. <code>python3 -m http.server</code>.</p>
+  </footer>
+</main>
+
+<script>
+// START EA9_TORUSTEXTUR
+(function () {
+  "use strict";
+
+  const TEXTURE_FILE = "textures/marmor.webp";
+  const DEG = Math.PI / 180;
+
+  const statusEl = document.getElementById("globalStatus");
+  const canvas = document.getElementById("glCanvas");
+  const info = {
+    texture: document.getElementById("infoTexture"),
+    azimuth: document.getElementById("infoAzimuth"),
+    elevation: document.getElementById("infoElevation"),
+    distance: document.getElementById("infoDistance")
+  };
+  const btn = {
+    image: document.getElementById("btnImage"),
+    proc: document.getElementById("btnProc"),
+    toggle: document.getElementById("btnToggle"),
+    image2: document.getElementById("btnImage2"),
+    proc2: document.getElementById("btnProc2"),
+    left: document.getElementById("btnLeft"),
+    right: document.getElementById("btnRight"),
+    up: document.getElementById("btnUp"),
+    down: document.getElementById("btnDown"),
+    near: document.getElementById("btnNear"),
+    far: document.getElementById("btnFar")
+  };
+
+  function setStatus(text, kind) {
+    statusEl.textContent = text;
+    statusEl.className = "global-status" + (kind ? " is-" + kind : "");
+  }
+
+  // ---------- Shader ----------
+  const VS = [
+    "attribute vec3 aPosition;",
+    "attribute vec3 aNormal;",
+    "attribute vec2 aTextureCoord;",
+    "uniform mat4 uPMatrix;",
+    "uniform mat4 uMVMatrix;",
+    "uniform mat3 uNMatrix;",
+    "varying vec3 vPosition;",
+    "varying vec3 vNormal;",
+    "varying vec2 vTextureCoord;",
+    "void main() {",
+    "  vec4 tPosition = uMVMatrix * vec4(aPosition, 1.0);",
+    "  gl_Position = uPMatrix * tPosition;",
+    "  vPosition = tPosition.xyz;",
+    "  vNormal = normalize(uNMatrix * aNormal);",
+    "  vTextureCoord = aTextureCoord;",
+    "}"
+  ].join("\n");
+
+  // gemeinsamer Teil beider Fragment-Shader: Präzision, Varyings, Phong-Beleuchtung im Kameraraum
+  const FS_COMMON = [
+    "#ifdef GL_FRAGMENT_PRECISION_HIGH",
+    "precision highp float;",
+    "#else",
+    "precision mediump float;",
+    "#endif",
+    "varying vec3 vPosition;",
+    "varying vec3 vNormal;",
+    "varying vec2 vTextureCoord;",
+    "vec3 phong(vec3 albedo, vec3 p, vec3 n) {",
+    "  vec3 v = normalize(-p);",
+    "  vec3 l1 = normalize(vec3(-0.45, 0.75, 0.55));",   // Hauptlicht links oben vorne
+    "  vec3 l2 = normalize(vec3(0.7, -0.25, 0.45));",    // schwaches Fülllicht rechts unten
+    "  float d1 = max(dot(n, l1), 0.0);",
+    "  float d2 = max(dot(n, l2), 0.0);",
+    "  float s1 = pow(max(dot(n, normalize(l1 + v)), 0.0), 64.0);",
+    "  vec3 c = albedo * (0.30 + 0.74 * d1 + 0.16 * d2) + vec3(0.30 * s1);",
+    "  return min(c, vec3(1.0));",
+    "}"
+  ].join("\n");
+
+  const FS_IMAGE = FS_COMMON + "\n" + [
+    "uniform sampler2D uTexture;",
+    "const vec2 TILING = vec2(2.0, 1.0);",                // 2 Kacheln um den Ring, 1 um die Röhre
+    "void main() {",
+    "  vec4 tColor = texture2D(uTexture, vTextureCoord * TILING);",
+    "  gl_FragColor = vec4(phong(tColor.rgb, vPosition, normalize(vNormal)), 1.0);",
+    "}"
+  ].join("\n");
+
+  function procSource(hasDerivatives) {
+    return (hasDerivatives ? "#extension GL_OES_standard_derivatives : enable\n#define HAS_DERIVATIVES\n" : "") + FS_COMMON + "\n" + [
+      "const vec2 PERIOD = vec2(7.0, 3.0);",            // Zellen um Ring und Röhre
+      "const float BANDS = 24.0;",
+      "float random(vec2 co) {",
+      "  return fract(sin(dot(co.xy, vec2(12.9898, 78.233))) * 43758.5453);",
+      "}",
+      // periodisches Wertrauschen: Gitterpunkte modulo der Periode, daher nahtlos bei s = 1 und t = 1
+      "float pnoise(vec2 p, vec2 period) {",
+      "  vec2 i = floor(p);",
+      "  vec2 f = fract(p);",
+      "  vec2 i0 = mod(i, period);",
+      "  vec2 i1 = mod(i + 1.0, period);",
+      "  float a = random(i0);",
+      "  float b = random(vec2(i1.x, i0.y));",
+      "  float c = random(vec2(i0.x, i1.y));",
+      "  float d = random(i1);",
+      "  vec2 u = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);",
+      "  return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);",
+      "}",
+      "float fbm(vec2 p, vec2 period, int octaves) {",
+      "  float sum = 0.0;",
+      "  float amp = 0.5;",
+      "  float norm = 0.0;",
+      "  for (int o = 0; o < 6; o++) {",
+      "    if (o >= octaves) break;",
+      "    sum += amp * pnoise(p, period);",
+      "    norm += amp;",
+      "    p *= 2.0; period *= 2.0; amp *= 0.5;",
+      "  }",
+      "  return sum / norm;",
+      "}",
+      "vec3 malachit(vec2 st) {",
+      "  vec2 p = st * PERIOD;",
+      "  vec2 q = vec2(fbm(p, PERIOD, 3), fbm(p + vec2(5.2, 1.3), PERIOD, 3));",
+      "  vec2 r = vec2(fbm(p + 1.6 * q + vec2(1.7, 9.2), PERIOD, 3), fbm(p + 1.6 * q + vec2(8.3, 2.8), PERIOD, 3));",
+      "  float f = fbm(p + 1.8 * r, PERIOD, 4);",
+      "  float x = f * BANDS;",
+      "  float band = fract(x);",
+      "#ifdef HAS_DERIVATIVES",
+      "  float w = clamp(fwidth(x) * 1.5, 0.01, 0.5);",
+      "#else",
+      "  float w = 0.04;",
+      "#endif",
+      "  float shade = smoothstep(0.0, 0.92, band) * (1.0 - smoothstep(1.0 - w, 1.0, band));",
+      "  float edge = 1.0 - smoothstep(0.0, w + 0.025, band);",
+      "  float tone = 0.45 + 0.55 * random(vec2(floor(x), 3.0));",
+      "  vec3 deep = vec3(0.016, 0.125, 0.078);",
+      "  vec3 mid = vec3(0.050, 0.46, 0.275);",
+      "  vec3 light = vec3(0.38, 0.90, 0.62);",
+      "  vec3 col = mix(deep, mid, shade);",
+      "  col = mix(col, light, smoothstep(0.5, 1.0, shade) * tone);",
+      "  col *= 1.0 - 0.6 * edge;",
+      "  float fibre = fbm(p * 6.0 + 2.0 * r, PERIOD * 6.0, 2);",
+      "  col *= 0.9 + 0.2 * fibre;",
+      "  col *= 0.8 + 0.4 * q.y;",
+      "  return col;",
+      "}",
+      "void main() {",
+      "  vec3 tColor = malachit(vTextureCoord);",
+      "  gl_FragColor = vec4(phong(tColor, vPosition, normalize(vNormal)), 1.0);",
+      "}"
+    ].join("\n");
+  }
+
+  // ---------- Matrizen (spaltenweise gespeichert) ----------
+  function perspective(fovy, aspect, near, far) {
+    const f = 1 / Math.tan(fovy / 2), nf = 1 / (near - far);
+    return new Float32Array([
+      f / aspect, 0, 0, 0,
+      0, f, 0, 0,
+      0, 0, (far + near) * nf, -1,
+      0, 0, 2 * far * near * nf, 0
+    ]);
+  }
+  function normalize3(v) {
+    const l = Math.hypot(v[0], v[1], v[2]);
+    return [v[0] / l, v[1] / l, v[2] / l];
+  }
+  function cross(a, b) {
+    return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+  }
+  function dot3(a, b) { return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]; }
+  function lookAt(eye, center, up) {
+    const z = normalize3([eye[0] - center[0], eye[1] - center[1], eye[2] - center[2]]);
+    const x = normalize3(cross(up, z));
+    const y = cross(z, x);
+    return new Float32Array([
+      x[0], y[0], z[0], 0,
+      x[1], y[1], z[1], 0,
+      x[2], y[2], z[2], 0,
+      -dot3(x, eye), -dot3(y, eye), -dot3(z, eye), 1
+    ]);
+  }
+  // Normalenmatrix: Inverse der Transponierten des linken oberen 3x3-Blocks
+  // Ergebnis spaltenweise: die Zeilen von A^-1 hintereinander sind die Spalten von (A^-1)^T
+  function normalMatrix(m) {
+    const a00 = m[0], a01 = m[4], a02 = m[8];   // a_rc = Zeile r, Spalte c
+    const a10 = m[1], a11 = m[5], a12 = m[9];
+    const a20 = m[2], a21 = m[6], a22 = m[10];
+    const c00 = a11 * a22 - a12 * a21, c01 = a12 * a20 - a10 * a22, c02 = a10 * a21 - a11 * a20;
+    const id = 1 / (a00 * c00 + a01 * c01 + a02 * c02);
+    return new Float32Array([
+      c00 * id, (a02 * a21 - a01 * a22) * id, (a01 * a12 - a02 * a11) * id,
+      c01 * id, (a00 * a22 - a02 * a20) * id, (a02 * a10 - a00 * a12) * id,
+      c02 * id, (a01 * a20 - a00 * a21) * id, (a00 * a11 - a01 * a10) * id
+    ]);
+  }
+
+  // ---------- Torus mit Texturkoordinaten ----------
+  const torus = {
+    createVertexData: function () {
+      const n = 64, m = 128;       // n Schritte um die Röhre (u), m Schritte um den Ring (v)
+      const R = 1.0, r = 0.42;
+      const du = 2 * Math.PI / n, dv = 2 * Math.PI / m;
+
+      this.vertices = new Float32Array(3 * (n + 1) * (m + 1));
+      this.normals = new Float32Array(3 * (n + 1) * (m + 1));
+      this.textureCoord = new Float32Array(2 * (n + 1) * (m + 1));
+      this.indicesTris = new Uint16Array(3 * 2 * n * m);
+      const vertices = this.vertices, normals = this.normals, textureCoord = this.textureCoord, indicesTris = this.indicesTris;
+      let iTris = 0;
+
+      for (let i = 0; i <= n; i++) {
+        const u = i * du;
+        for (let j = 0; j <= m; j++) {
+          const v = j * dv;
+          const iVertex = i * (m + 1) + j;
+          // Torus flach in der XZ-Ebene (y und z gegenüber dem Skript vertauscht)
+          vertices[iVertex * 3] = (R + r * Math.cos(u)) * Math.cos(v);
+          vertices[iVertex * 3 + 1] = r * Math.sin(u);
+          vertices[iVertex * 3 + 2] = (R + r * Math.cos(u)) * Math.sin(v);
+          normals[iVertex * 3] = Math.cos(u) * Math.cos(v);
+          normals[iVertex * 3 + 1] = Math.sin(u);
+          normals[iVertex * 3 + 2] = Math.cos(u) * Math.sin(v);
+          // Texturkoordinaten: s um den Ring, t um die Röhre, jeweils 0 bis 1.
+          // Letzte Spalte/Zeile (j = m bzw. i = n) doppelt die erste mit s = 1 bzw. t = 1.
+          textureCoord[iVertex * 2] = j / m;
+          textureCoord[iVertex * 2 + 1] = i / n;
+
+          if (i > 0 && j > 0) {
+            const a = iVertex - (m + 1) - 1, b = iVertex - (m + 1), c = iVertex - 1, d = iVertex;
+            indicesTris[iTris++] = a; indicesTris[iTris++] = c; indicesTris[iTris++] = b;
+            indicesTris[iTris++] = b; indicesTris[iTris++] = c; indicesTris[iTris++] = d;
+          }
+        }
+      }
+      this.vertexCount = (n + 1) * (m + 1);
+      this.indexCount = iTris;
+    }
+  };
+
+  // ---------- WebGL-Initialisierung ----------
+  const gl = canvas.getContext("webgl", { antialias: true });
+  if (!gl) {
+    setStatus("Fehler: WebGL ist in diesem Browser nicht verfügbar.", "error");
+    return;
+  }
+  const derivExt = gl.getExtension("OES_standard_derivatives");
+  const anisoExt = gl.getExtension("EXT_texture_filter_anisotropic") ||
+                   gl.getExtension("WEBKIT_EXT_texture_filter_anisotropic");
+
+  function compile(type, source, name) {
+    const sh = gl.createShader(type);
+    gl.shaderSource(sh, source);
+    gl.compileShader(sh);
+    if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) {
+      throw new Error(name + ": " + gl.getShaderInfoLog(sh));
+    }
+    return sh;
+  }
+  function createProgram(fsSource, name) {
+    const prog = gl.createProgram();
+    gl.attachShader(prog, compile(gl.VERTEX_SHADER, VS, "Vertex-Shader"));
+    gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, fsSource, name));
+    // feste Attribut-Positionen, damit beide Programme dieselben VBO-Bindungen nutzen
+    gl.bindAttribLocation(prog, 0, "aPosition");
+    gl.bindAttribLocation(prog, 1, "aNormal");
+    gl.bindAttribLocation(prog, 2, "aTextureCoord");
+    gl.linkProgram(prog);
+    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+      throw new Error(name + " (Linken): " + gl.getProgramInfoLog(prog));
+    }
+    prog.pMatrixUniform = gl.getUniformLocation(prog, "uPMatrix");
+    prog.mvMatrixUniform = gl.getUniformLocation(prog, "uMVMatrix");
+    prog.nMatrixUniform = gl.getUniformLocation(prog, "uNMatrix");
+    prog.textureUniform = gl.getUniformLocation(prog, "uTexture");
+    return prog;
+  }
+
+  let progImage, progProc;
+  try {
+    progImage = createProgram(FS_IMAGE, "Fragment-Shader Bildtextur");
+    progProc = createProgram(procSource(!!derivExt), "Fragment-Shader prozedurale Textur");
+  } catch (err) {
+    console.error(err);
+    setStatus("Fehler beim Erstellen der Shader: " + err.message, "error");
+    return;
+  }
+
+  const model = {};
+  torus.createVertexData.apply(model);
+
+  function createVbo(target, data) {
+    const vbo = gl.createBuffer();
+    gl.bindBuffer(target, vbo);
+    gl.bufferData(target, data, gl.STATIC_DRAW);
+    return vbo;
+  }
+  model.vboPos = createVbo(gl.ARRAY_BUFFER, model.vertices);
+  model.vboNormal = createVbo(gl.ARRAY_BUFFER, model.normals);
+  model.vboTextureCoord = createVbo(gl.ARRAY_BUFFER, model.textureCoord);
+  model.iboTris = createVbo(gl.ELEMENT_ARRAY_BUFFER, model.indicesTris);
+
+  gl.bindBuffer(gl.ARRAY_BUFFER, model.vboPos);
+  gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
+  gl.enableVertexAttribArray(0);
+  gl.bindBuffer(gl.ARRAY_BUFFER, model.vboNormal);
+  gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 0, 0);
+  gl.enableVertexAttribArray(1);
+  gl.bindBuffer(gl.ARRAY_BUFFER, model.vboTextureCoord);
+  gl.vertexAttribPointer(2, 2, gl.FLOAT, false, 0, 0);
+  gl.enableVertexAttribArray(2);
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, model.iboTris);
+
+  gl.enable(gl.DEPTH_TEST);
+  gl.clearColor(0, 0, 0, 0); // durchsichtig, der Hintergrund kommt aus dem CSS-Verlauf
+
+  // ---------- Bildtextur laden (wie initTexture / onloadTextureImage im Skript) ----------
+  const texture = { gl: null, loaded: false, failed: false, width: 0, height: 0 };
+
+  function initTexture(filename) {
+    texture.gl = gl.createTexture();
+    texture.image = new Image();
+    texture.image.onload = function () { onloadTextureImage(); };
+    texture.image.onerror = function () {
+      textureFailed("Hinweis: Die Bildtextur " + filename + " konnte nicht geladen werden. " +
+        "Bitte die Seite über einen Webserver öffnen (z. B. python3 -m http.server) und prüfen, ob die Datei vorhanden ist. " +
+        "Die prozedurale Textur wird stattdessen gezeigt.");
+    };
+    texture.image.src = filename;
+  }
+
+  function onloadTextureImage() {
+    gl.bindTexture(gl.TEXTURE_2D, texture.gl);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    try {
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texture.image);
+    } catch (err) {
+      // tritt bei file:// auf: der Browser sperrt Bilder aus fremder Herkunft für WebGL
+      gl.bindTexture(gl.TEXTURE_2D, null);
+      textureFailed("Hinweis: Die Bildtextur darf hier nicht verwendet werden (" + err.name + "). " +
+        (location.protocol === "file:" ? "Die Seite wurde direkt als Datei (file://) geöffnet. " : "") +
+        "Bitte die Seite über einen Webserver öffnen, z. B. mit python3 -m http.server im Projektordner und dann http://localhost:8000. " +
+        "Die prozedurale Textur funktioniert auch ohne Webserver und wird stattdessen gezeigt.");
+      return;
+    }
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+    gl.generateMipmap(gl.TEXTURE_2D);
+    if (anisoExt) {
+      const maxAniso = gl.getParameter(anisoExt.MAX_TEXTURE_MAX_ANISOTROPY_EXT);
+      gl.texParameterf(gl.TEXTURE_2D, anisoExt.TEXTURE_MAX_ANISOTROPY_EXT, Math.min(8, maxAniso));
+    }
+    gl.bindTexture(gl.TEXTURE_2D, null);
+    texture.loaded = true;
+    texture.width = texture.image.naturalWidth;
+    texture.height = texture.image.naturalHeight;
+    setStatus("Bereit. Bildtextur geladen (" + texture.width + " × " + texture.height + " Pixel, Mipmaps). " +
+      "Kamera mit Pfeiltasten oder WASD, Textur mit 1, 2 oder t umschalten.", "ready");
+    enableControls();
+    updateInfo();
+    requestRender();
+  }
+
+  function textureFailed(message) {
+    texture.failed = true;
+    setStatus(message, "warn");
+    mode = "proc";
+    enableControls();
+    btn.image.disabled = btn.image2.disabled = btn.toggle.disabled = true;
+    btn.image.title = btn.image2.title = "Bildtextur nicht verfügbar";
+    updateInfo();
+    requestRender();
+  }
+
+  // ---------- Kamera und Zustand ----------
+  const camera = {
+    center: [0, 0, 0],
+    up: [0, 1, 0],
+    zAngle: 30 * DEG,       // Azimut um die Y-Achse
+    elevation: 32 * DEG,    // Neigung über der XZ-Ebene
+    distance: 3.6
+  };
+  const LIMITS = { elevMin: -60 * DEG, elevMax: 85 * DEG, distMin: 2.2, distMax: 7.0 };
+  const STEP = { angle: 5 * DEG, distance: 0.25 };
+  let mode = "image";
+
+  function calculateCameraOrbit() {
+    const c = Math.cos(camera.elevation);
+    return [
+      camera.center[0] + camera.distance * c * Math.sin(camera.zAngle),
+      camera.center[1] + camera.distance * Math.sin(camera.elevation),
+      camera.center[2] + camera.distance * c * Math.cos(camera.zAngle)
+    ];
+  }
+
+  function clamp(x, a, b) { return Math.min(b, Math.max(a, x)); }
+  function fmt(x) { return x.toFixed(2).replace(".", ","); }
+
+  function updateInfo() {
+    info.texture.textContent = mode === "image" ? "Bild (Marmor, " + TEXTURE_FILE.split("/").pop() + ")" : "prozedural (Malachit)";
+    let az = Math.round(camera.zAngle / DEG) % 360;
+    if (az < 0) az += 360;
+    info.azimuth.textContent = az + "°";
+    info.elevation.textContent = Math.round(camera.elevation / DEG) + "°";
+    info.distance.textContent = fmt(camera.distance);
+    btn.image.setAttribute("aria-pressed", mode === "image" ? "true" : "false");
+    btn.proc.setAttribute("aria-pressed", mode === "proc" ? "true" : "false");
+    btn.proc2.className = "btn" + (mode === "proc" ? " secondary" : "");
+    btn.image2.className = "btn" + (mode === "image" ? " secondary" : "");
+    canvas.dataset.mode = mode;
+  }
+
+  function enableControls() {
+    for (const k in btn) btn[k].disabled = false;
+  }
+
+  function setMode(m) {
+    if (m === "image" && !texture.loaded) return;
+    mode = m;
+    updateInfo();
+    requestRender();
+  }
+
+  function moveCamera(dAz, dEl, dDist) {
+    camera.zAngle += dAz;
+    camera.elevation = clamp(camera.elevation + dEl, LIMITS.elevMin, LIMITS.elevMax);
+    camera.distance = clamp(camera.distance + dDist, LIMITS.distMin, LIMITS.distMax);
+    updateInfo();
+    requestRender();
+  }
+
+  // ---------- Zeichnen ----------
+  function resizeCanvas() {
+    const dpr = window.devicePixelRatio || 1;
+    const w = Math.max(320, Math.min(2560, Math.round(canvas.clientWidth * dpr)));
+    const h = Math.round(w * 10 / 16);
+    if (canvas.width !== w || canvas.height !== h) {
+      canvas.width = w;
+      canvas.height = h;
+    }
+  }
+
+  let renderPending = false;
+  function requestRender() {
+    if (renderPending) return;
+    renderPending = true;
+    requestAnimationFrame(render);
+  }
+
+  function render() {
+    renderPending = false;
+    resizeCanvas();
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+    const useImage = mode === "image";
+    if (useImage && !texture.loaded) return; // wie im Skript: erst zeichnen, wenn die Textur da ist
+    const prog = useImage ? progImage : progProc;
+    gl.useProgram(prog);
+
+    const pMatrix = perspective(45 * DEG, canvas.width / canvas.height, 0.1, 100);
+    const vMatrix = lookAt(calculateCameraOrbit(), camera.center, camera.up);
+    const mvMatrix = vMatrix; // Modellmatrix ist die Einheitsmatrix
+    gl.uniformMatrix4fv(prog.pMatrixUniform, false, pMatrix);
+    gl.uniformMatrix4fv(prog.mvMatrixUniform, false, mvMatrix);
+    gl.uniformMatrix3fv(prog.nMatrixUniform, false, normalMatrix(mvMatrix));
+
+    if (useImage) {
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, texture.gl);
+      gl.uniform1i(prog.textureUniform, 0);
+    }
+    gl.drawElements(gl.TRIANGLES, model.indexCount, gl.UNSIGNED_SHORT, 0);
+    canvas.dataset.frames = String((parseInt(canvas.dataset.frames || "0", 10)) + 1);
+  }
+
+  // ---------- Interaktion ----------
+  function flash(b) {
+    b.classList.add("is-pressed");
+    setTimeout(function () { b.classList.remove("is-pressed"); }, 120);
+  }
+  const actions = {
+    left: function () { moveCamera(-STEP.angle, 0, 0); },
+    right: function () { moveCamera(STEP.angle, 0, 0); },
+    up: function () { moveCamera(0, STEP.angle, 0); },
+    down: function () { moveCamera(0, -STEP.angle, 0); },
+    near: function () { moveCamera(0, 0, -STEP.distance); },
+    far: function () { moveCamera(0, 0, STEP.distance); },
+    image: function () { setMode("image"); },
+    proc: function () { setMode("proc"); },
+    toggle: function () { setMode(mode === "image" ? "proc" : "image"); }
+  };
+  btn.left.addEventListener("click", actions.left);
+  btn.right.addEventListener("click", actions.right);
+  btn.up.addEventListener("click", actions.up);
+  btn.down.addEventListener("click", actions.down);
+  btn.near.addEventListener("click", actions.near);
+  btn.far.addEventListener("click", actions.far);
+  btn.image.addEventListener("click", actions.image);
+  btn.proc.addEventListener("click", actions.proc);
+  btn.toggle.addEventListener("click", actions.toggle);
+  btn.image2.addEventListener("click", actions.image);
+  btn.proc2.addEventListener("click", actions.proc);
+
+  const KEYS = {
+    "arrowleft": ["left", btn.left], "a": ["left", btn.left],
+    "arrowright": ["right", btn.right], "d": ["right", btn.right],
+    "arrowup": ["up", btn.up], "w": ["up", btn.up],
+    "arrowdown": ["down", btn.down], "s": ["down", btn.down],
+    "+": ["near", btn.near],
+    "-": ["far", btn.far],
+    "1": ["image", btn.image], "2": ["proc", btn.proc], "t": ["toggle", btn.toggle]
+  };
+  window.addEventListener("keydown", function (evt) {
+    if (evt.ctrlKey || evt.metaKey || evt.altKey) return;
+    const entry = KEYS[(evt.key || "").toLowerCase()];
+    if (!entry) return;
+    evt.preventDefault();
+    // Texturwechsel nur einmal pro Tastendruck, Kamerabewegung darf beim Halten wiederholen
+    if (evt.repeat && (entry[0] === "image" || entry[0] === "proc" || entry[0] === "toggle")) return;
+    if (entry[1].disabled) return;
+    flash(entry[1]);
+    actions[entry[0]]();
+  });
+
+  window.addEventListener("resize", requestRender);
+
+  // ---------- Start ----------
+  updateInfo();
+  initTexture(TEXTURE_FILE);
+})();
+// END EA9_TORUSTEXTUR
+
+// Hilfe-Popover
+document.querySelectorAll(".help").forEach(help => {
+  const btn = help.querySelector(".help-btn");
+  btn.addEventListener("click", e => {
+    e.stopPropagation();
+    document.querySelectorAll(".help.is-open").forEach(h => { if (h !== help) { h.classList.remove("is-open"); h.querySelector(".help-btn").setAttribute("aria-expanded", "false"); } });
+    const open = help.classList.toggle("is-open");
+    btn.setAttribute("aria-expanded", open ? "true" : "false");
+  });
+});
+document.addEventListener("click", e => { if (!e.target.closest(".help")) document.querySelectorAll(".help.is-open").forEach(h => { h.classList.remove("is-open"); h.querySelector(".help-btn").setAttribute("aria-expanded", "false"); }); });
+document.addEventListener("keydown", e => { if (e.key === "Escape") document.querySelectorAll(".help.is-open").forEach(h => { h.classList.remove("is-open"); h.querySelector(".help-btn").setAttribute("aria-expanded", "false"); }); });
+</script>
+</body>
+</html>
